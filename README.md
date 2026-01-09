@@ -1,281 +1,176 @@
 # Memvid Agent Memory
 
-**Persistent AI Agent Memory for GitHub Copilot**
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/memvid.memvid-agent-memory?label=VS%20Code%20Marketplace&color=blue)](https://marketplace.visualstudio.com/items?itemName=memvid.memvid-agent-memory)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-This VS Code extension provides persistent memory capabilities for GitHub Copilot agents using [Memvid](https://github.com/memvid/memvid). Agents can store, search, and retrieve information across sessions without any manual configuration.
+> **Give your AI agents a memory that lasts.**
 
-## Features
+Memvid Agent Memory gives GitHub Copilot persistent memory capabilities. Your AI assistant can now remember information across sessions, search through past conversations, and provide contextual answers based on stored knowledge.
 
-- 🧠 **Persistent Memory**: Store information that persists across VS Code sessions
-- 🔍 **Smart Search**: BM25 keyword search with intelligent fallback strategies
-- 🤖 **Query Rewriter Agent**: LLM-powered query rewriting when initial search fails
-- 💬 **RAG Queries**: Ask natural language questions with LLM-generated answers
-- ⏱️ **Timeline View**: See recent memory entries (newest first)
-- 🔌 **Zero Configuration**: MCP tools are automatically registered - no `mcp.json` needed
-- 🌐 **Multi-Language Support**: Stopword filtering for German and English
-
-## MCP Tools
-
-The extension provides the following MCP tools for GitHub Copilot agents:
-
-| Tool | Description |
-|------|-------------|
-| `memvid_store` | Store information in persistent memory |
-| `memvid_search` | Search memory by keywords |
-| `memvid_ask` | Ask questions using RAG with LLM answer synthesis |
-| `memvid_timeline` | Get recent memory entries (newest first) |
-| `memvid_stats` | View memory statistics |
-
-## Usage
-
-### Storing Information
-
-Copilot agents can store information using natural language:
-
-```
-"Remember that the user prefers dark mode and uses TypeScript"
-```
-
-The agent will use the `memvid_store` tool to save this preference.
-
-### Retrieving Information
-
-```
-"What are the user's coding preferences?"
-```
-
-The agent will search memory and return relevant stored information. If an LLM provider is configured, it will synthesize an answer from the search results.
-
-### Query Rewriting
-
-When a search returns no results, the extension can use an LLM to generate alternative search terms:
-
-```
-User: "When is the best time for deep work?"
-→ Initial search: "deep work" - no results
-→ Query Rewriter generates: ["konzentriertes arbeiten", "focus", "produktivität", "flow"]
-→ Retry search finds relevant memories
-```
-
-### Viewing Timeline
-
-```
-"What have we discussed recently?"
-```
-
-The agent will show recent memory entries in reverse chronological order (newest first).
-
-## Configuration
-
-Configure the extension in VS Code Settings (`Ctrl+,`):
-
-### General Settings
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `memvidAgentMemory.memoryFilePath` | `""` | Custom path to memory file. If empty, uses workspace or global storage. |
-| `memvidAgentMemory.embeddingProvider` | `"none"` | Embedding provider for semantic search |
-| `memvidAgentMemory.autoCreateMemory` | `true` | Auto-create memory file if it doesn't exist |
-| `memvidAgentMemory.enableSemanticSearch` | `true` | Enable semantic/vector search |
-| `memvidAgentMemory.defaultSearchLimit` | `10` | Default number of search results |
+![Memvid Demo](https://raw.githubusercontent.com/memvid/memvid-vscode-extension/main/images/demo.gif)
 
 ---
 
-## Embedding Providers
+## ✨ Features
 
-Choose one of the following embedding providers for semantic search:
+### 🧠 Persistent Memory
+Store information that survives between VS Code sessions. Your agent remembers what you taught it yesterday, last week, or months ago.
 
-| Provider | Description |
-|----------|-------------|
-| `none` | BM25 keyword search only (no embeddings) |
-| `local` | Local embeddings (not available on Windows) |
-| `openai` | OpenAI embeddings (requires API key) |
-| `azureOpenai` | Azure OpenAI embeddings (requires endpoint and API key) |
-| `ollama` | Ollama local embeddings (requires local Ollama server) |
-| `cohere` | Cohere embeddings (requires API key) |
-| `voyage` | Voyage embeddings (requires API key) |
+### 🔍 Intelligent Search  
+Find relevant memories using smart keyword matching with automatic fallback strategies. Supports both German and English queries.
 
-### OpenAI Embedding Configuration
+### 🤖 AI-Powered Answers
+Ask questions in natural language and get synthesized answers from your stored memories using your preferred LLM provider.
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `memvidAgentMemory.openai.apiKey` | `""` | OpenAI API Key (or set via `OPENAI_API_KEY` env var) |
-| `memvidAgentMemory.openai.baseUrl` | `"https://api.openai.com/v1"` | OpenAI API base URL (change for compatible endpoints) |
-| `memvidAgentMemory.openai.model` | `"text-embedding-3-small"` | OpenAI embedding model |
+### 🔄 Query Rewriting
+When a search doesn't find results, the AI automatically tries alternative search terms, synonyms, and translations.
 
-### Azure OpenAI Embedding Configuration
+### ⏱️ Timeline View
+See your most recent memories at a glance, sorted from newest to oldest.
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `memvidAgentMemory.azureOpenai.endpoint` | `""` | Azure OpenAI endpoint URL |
-| `memvidAgentMemory.azureOpenai.apiKey` | `""` | Azure OpenAI API Key |
-| `memvidAgentMemory.azureOpenai.deploymentName` | `""` | Azure OpenAI deployment name for embeddings |
-| `memvidAgentMemory.azureOpenai.apiVersion` | `"2024-02-01"` | Azure OpenAI API version |
-
-### Ollama Embedding Configuration
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `memvidAgentMemory.ollama.baseUrl` | `"http://localhost:11434"` | Ollama server URL |
-| `memvidAgentMemory.ollama.model` | `"nomic-embed-text"` | Ollama embedding model |
+### 🔌 Zero Configuration
+Works out of the box! MCP tools are automatically registered with GitHub Copilot - no manual setup required.
 
 ---
 
-## LLM Provider (for Answer Generation)
+## 🚀 Quick Start
 
-The LLM provider is used to generate answers from search results and to rewrite queries when no results are found.
+1. **Install** the extension from VS Code Marketplace
+2. **Open** any workspace with GitHub Copilot
+3. **Start using** memory commands in Copilot Chat:
 
-| Provider | Description |
-|----------|-------------|
-| `none` | No LLM - returns raw search results only |
-| `copilot` | **Recommended** - Uses GitHub Copilot via VS Code Language Model API |
-| `openai` | OpenAI Chat API (requires API key) |
-| `azureOpenai` | Azure OpenAI Chat API (requires endpoint and API key) |
-| `ollama` | Ollama local LLM (requires local Ollama server) |
+```
+💬 "Remember that this project uses PostgreSQL and Redis"
+💬 "What database does this project use?"
+💬 "Show me recent memories"
+```
 
-### LLM General Settings
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `memvidAgentMemory.llm.provider` | `"none"` | LLM provider for answer generation |
-| `memvidAgentMemory.llm.maxTokens` | `1024` | Maximum tokens in LLM response |
-| `memvidAgentMemory.llm.temperature` | `0.7` | LLM temperature (0-1) |
-
-### GitHub Copilot LLM (Recommended)
-
-Uses your existing GitHub Copilot subscription - no additional API keys needed!
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `memvidAgentMemory.llm.copilot.modelFamily` | `"gpt-4o"` | Copilot model family (`gpt-4o`, `gpt-4o-mini`, `claude-3.5-sonnet`) |
-
-### OpenAI LLM Configuration
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `memvidAgentMemory.llm.openai.apiKey` | `""` | OpenAI API Key |
-| `memvidAgentMemory.llm.openai.baseUrl` | `"https://api.openai.com/v1"` | OpenAI API base URL |
-| `memvidAgentMemory.llm.openai.model` | `"gpt-4o-mini"` | OpenAI chat model |
-
-### Azure OpenAI LLM Configuration
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `memvidAgentMemory.llm.azureOpenai.endpoint` | `""` | Azure OpenAI endpoint URL |
-| `memvidAgentMemory.llm.azureOpenai.apiKey` | `""` | Azure OpenAI API Key |
-| `memvidAgentMemory.llm.azureOpenai.deploymentName` | `""` | Azure OpenAI deployment name for chat |
-| `memvidAgentMemory.llm.azureOpenai.apiVersion` | `"2024-02-01"` | Azure OpenAI API version |
-
-### Ollama LLM Configuration
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `memvidAgentMemory.llm.ollama.baseUrl` | `"http://localhost:11434"` | Ollama server URL |
-| `memvidAgentMemory.llm.ollama.model` | `"llama3.2"` | Ollama chat model |
+That's it! Your agent now has persistent memory.
 
 ---
 
-## Search Behavior
+## 🛠️ Available Tools
 
-The search system uses intelligent fallback strategies:
-
-1. **Full Query Search**: Searches with the complete query
-2. **OR Query**: If no results, combines keywords with OR logic
-3. **Single Keyword Search**: Falls back to individual keyword searches
-4. **Query Rewriting** (if LLM configured): Uses LLM to generate alternative search terms including:
-   - Synonyms
-   - German/English translations
-   - Related technical terms
-
-### Stopword Filtering
-
-The search automatically filters common stopwords in German and English to improve result quality.
+| Tool | What it does |
+|------|--------------|
+| `memvid_store` | Save information to memory |
+| `memvid_search` | Find memories by keywords |
+| `memvid_ask` | Ask questions with AI-generated answers |
+| `memvid_timeline` | View recent memories |
+| `memvid_stats` | Check memory statistics |
 
 ---
 
-## Commands
+## ⚙️ Configuration
+
+Access settings via **File → Preferences → Settings** → search for "Memvid"
+
+### LLM Provider (for AI Answers)
+
+Choose how answers are generated from your memories:
+
+| Provider | Setup |
+|----------|-------|
+| **GitHub Copilot** ⭐ | No setup needed - uses your existing subscription |
+| **OpenAI** | Add your API key |
+| **Azure OpenAI** | Configure endpoint and deployment |
+| **Ollama** | Run Ollama locally |
+
+> 💡 **Tip:** Select "copilot" as LLM provider for the best experience with zero configuration!
+
+### Embedding Provider (for Semantic Search)
+
+Enable semantic search with embeddings:
+
+| Provider | Best for |
+|----------|----------|
+| **None** | Keyword search only (fast, no setup) |
+| **OpenAI** | Best quality embeddings |
+| **Azure OpenAI** | Enterprise environments |
+| **Ollama** | Privacy-focused, runs locally |
+
+---
+
+## 💡 Use Cases
+
+### 📝 Project Documentation
+```
+"Remember: The API authentication uses JWT tokens with 24h expiry"
+"Remember: Deploy to production using 'npm run deploy:prod'"
+```
+
+### 👤 User Preferences
+```
+"Remember that I prefer functional programming style"
+"Remember I use tabs, not spaces"
+```
+
+### 🔧 Troubleshooting Notes
+```
+"Remember: If Docker fails, run 'docker system prune' first"
+"Remember: The SSL cert renews on the 15th of each month"
+```
+
+### 📚 Learning & Research
+```
+"Remember this explanation of React hooks: ..."
+"What did I learn about async/await patterns?"
+```
+
+---
+
+## 📋 Requirements
+
+- **VS Code** 1.102.0 or later
+- **GitHub Copilot** subscription
+- **Node.js** 18+ (for extension)
+
+---
+
+## 🔒 Privacy & Storage
+
+- All memories are stored **locally** in your workspace (`.memvid/agent-memory.mv2`)
+- No data is sent to external servers unless you configure an external LLM/embedding provider
+- Use Copilot + no embeddings for a fully local experience
+
+---
+
+## 📖 Commands
+
+Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and type "Memvid":
 
 | Command | Description |
 |---------|-------------|
-| `Memvid: Open Agent Memory File` | Open the memory file location |
-| `Memvid: Clear Agent Memory` | Clear all stored memories |
-| `Memvid: Show Memory Statistics` | Display memory stats |
-| `Memvid: Refresh MCP Server` | Refresh the MCP server connection |
+| `Memvid: Show Memory Statistics` | View how much is stored |
+| `Memvid: Open Agent Memory File` | Browse memory file location |
+| `Memvid: Clear Agent Memory` | Start fresh |
+| `Memvid: Refresh MCP Server` | Reconnect if needed |
 
-## Requirements
+---
 
-- VS Code 1.102.0 or later
-- Node.js 18 or later
-- GitHub Copilot subscription (for MCP tools and optional Copilot LLM)
+## 🐛 Troubleshooting
 
-## Platform Support
+**Agent doesn't remember anything?**
+- Check that the extension is active (look for Memvid in the status bar)
+- Try `Memvid: Refresh MCP Server` from Command Palette
 
-| Platform | Local Embeddings | Notes |
-|----------|-----------------|-------|
-| macOS (ARM64) | ✅ | Full support |
-| macOS (Intel) | ✅ | Full support |
-| Linux (x64) | ✅ | Full support |
-| Windows | ❌ | Use OpenAI/Azure/Ollama embeddings |
+**Search returns no results?**
+- Try different keywords
+- Configure an LLM provider for automatic query rewriting
+- Use `memvid_timeline` to see what's stored
 
-## Memory File Location
+**Need help?**
+- [Open an issue](https://github.com/memvid/memvid-vscode-extension/issues)
+- [View documentation](https://docs.memvid.com/)
 
-Memory is stored in a single `.mv2` file:
+---
 
-1. **Workspace**: `.memvid/agent-memory.mv2` in workspace root
-2. **Global**: VS Code global storage if no workspace is open
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     GitHub Copilot                          │
-│                          ↕                                  │
-│                    MCP Protocol                             │
-│                          ↕                                  │
-├─────────────────────────────────────────────────────────────┤
-│  VS Code Extension                                          │
-│  ├── MCP Provider (auto-registers tools)                    │
-│  ├── Bridge Server (Copilot LLM access)                     │
-│  └── Memory Manager                                         │
-│                          ↕                                  │
-├─────────────────────────────────────────────────────────────┤
-│  MCP Server Process                                         │
-│  ├── Tool Handlers (store, search, ask, timeline, stats)    │
-│  ├── LLM Service (answer generation, query rewriting)       │
-│  └── Memvid SDK                                             │
-│                          ↕                                  │
-├─────────────────────────────────────────────────────────────┤
-│  Storage: agent-memory.mv2                                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Development
-
-```bash
-# Clone the repository
-git clone https://github.com/memvid/memvid-vscode-extension.git
-cd memvid-vscode-extension
-
-# Install dependencies
-npm install
-
-# Compile
-npm run compile
-
-# Watch mode
-npm run watch
-
-# Run extension in debug mode
-# Press F5 in VS Code
-```
-
-## License
+## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## Links
+---
 
-- [Memvid GitHub](https://github.com/memvid/memvid)
-- [Memvid Documentation](https://docs.memvid.com/)
-- [VS Code Extension API](https://code.visualstudio.com/api)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
+<p align="center">
+  Made with ❤️ by the <a href="https://github.com/memvid">Memvid</a> team
+</p>
