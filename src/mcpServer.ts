@@ -109,6 +109,8 @@ export class MemvidMcpServer {
     this.llmService = createLlmServiceFromEnv();
   }
 
+  private initError: string | null = null;
+
   /**
    * Start the MCP server
    */
@@ -118,16 +120,34 @@ export class MemvidMcpServer {
     const embeddingConfig = getEmbeddingConfigFromEnv();
     const enableSemanticSearch = process.env.MEMVID_ENABLE_SEMANTIC_SEARCH === '1';
     
+    console.error(`[MCP Server] Memory path: ${memoryPath}`);
     console.error(`[MCP Server] Embedding provider: ${embeddingConfig.provider}`);
     console.error(`[MCP Server] Semantic search enabled: ${enableSemanticSearch}`);
     console.error(`[MCP Server] LLM provider: ${process.env.MEMVID_LLM_PROVIDER || 'none'}`);
     
-    try {
-      await this.memoryManager.initialize(memoryPath, true, embeddingConfig);
-      this.initialized = true;
-      console.error(`[MCP Server] Memory initialized: ${memoryPath}`);
-    } catch (error) {
-      console.error(`[MCP Server] Failed to initialize memory: ${(error as Error).message}`);
+    // Try to initialize with retries
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.memoryManager.initialize(memoryPath, true, embeddingConfig);
+        this.initialized = true;
+        this.initError = null;
+        console.error(`[MCP Server] Memory initialized: ${memoryPath}`);
+        break;
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        console.error(`[MCP Server] Initialization attempt ${attempt}/${maxRetries} failed: ${errorMessage}`);
+        this.initError = errorMessage;
+        
+        if (attempt < maxRetries) {
+          // Wait before retry (100ms, 200ms, 400ms)
+          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt - 1)));
+        }
+      }
+    }
+
+    if (!this.initialized) {
+      console.error(`[MCP Server] Failed to initialize memory after ${maxRetries} attempts`);
     }
 
     // Set up stdio communication
@@ -251,13 +271,32 @@ export class MemvidMcpServer {
     const args = (params.arguments || {}) as Record<string, unknown>;
 
     if (!this.initialized) {
-      return {
-        content: [{
-          type: 'text',
-          text: 'Error: Memory not initialized. Please check the extension configuration.',
-        }],
-        isError: true,
-      };
+      // Try to initialize on first tool call if not initialized
+      const memoryPath = process.env.MEMVID_MEMORY_PATH || './agent-memory.mv2';
+      const embeddingConfig = getEmbeddingConfigFromEnv();
+      
+      try {
+        await this.memoryManager.initialize(memoryPath, true, embeddingConfig);
+        this.initialized = true;
+        this.initError = null;
+        console.error(`[MCP Server] Late initialization successful: ${memoryPath}`);
+      } catch (error) {
+        this.initError = (error as Error).message;
+        console.error(`[MCP Server] Late initialization failed: ${this.initError}`);
+      }
+      
+      if (!this.initialized) {
+        const errorDetails = this.initError 
+          ? `\n\nDetails: ${this.initError}` 
+          : '';
+        return {
+          content: [{
+            type: 'text',
+            text: `Error: Memory not initialized. Please check the extension configuration.${errorDetails}\n\nTroubleshooting:\n1. Check Output panel > "Memvid Agent Memory" for errors\n2. Try command "Memvid: Refresh MCP Server"\n3. Check if memory path is accessible: ${process.env.MEMVID_MEMORY_PATH || 'not set'}`,
+          }],
+          isError: true,
+        };
+      }
     }
 
     switch (name) {

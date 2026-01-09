@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { getMemoryFilePath } from './config/settings.js';
+import { getMemoryFilePath, getEmbeddingConfig } from './config/settings.js';
 import { MemoryManager } from './memoryManager.js';
 
 /**
@@ -21,6 +21,50 @@ export function registerCommands(
   onRefreshMcp: () => void
 ): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
+
+  // Command: Initialize Memory
+  disposables.push(
+    vscode.commands.registerCommand('memvidAgentMemory.initialize', async () => {
+      const memoryPath = getMemoryFilePath(globalStoragePath);
+      const embeddingConfig = getEmbeddingConfig();
+      
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Memvid: Initializing Memory...',
+          cancellable: false,
+        },
+        async (progress) => {
+          try {
+            progress.report({ message: 'Creating memory file...' });
+            
+            const manager = MemoryManager.getInstance();
+            await manager.initialize(memoryPath, true, embeddingConfig);
+            
+            progress.report({ message: 'Getting statistics...' });
+            const stats = await manager.getStats();
+            
+            vscode.window.showInformationMessage(
+              `Memvid Memory initialized successfully!\n` +
+              `Path: ${memoryPath}\n` +
+              `Entries: ${stats.frameCount} (${stats.sizeFormatted})\n` +
+              `Embedding: ${embeddingConfig.provider}`
+            );
+            
+            // Refresh MCP server to use the initialized memory
+            onRefreshMcp();
+          } catch (error) {
+            const errorMessage = (error as Error).message;
+            vscode.window.showErrorMessage(
+              `Failed to initialize memory: ${errorMessage}\n\n` +
+              `Path: ${memoryPath}\n` +
+              `Embedding: ${embeddingConfig.provider}`
+            );
+          }
+        }
+      );
+    })
+  );
 
   // Command: Open Memory File
   disposables.push(
