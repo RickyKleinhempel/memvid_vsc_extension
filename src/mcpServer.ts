@@ -381,11 +381,61 @@ export class MemvidMcpServer {
       }
       
       // Retrieve relevant context from memory
-      const searchResult = await this.memoryManager.search(args.question, { 
+      let searchResult = await this.memoryManager.search(args.question, { 
         limit: args.contextLimit || 5,
       });
       
-      console.error(`[MCP Server] Search found ${searchResult.hits.length} hits`);
+      console.error(`[MCP Server] Initial search found ${searchResult.hits.length} hits`);
+      
+      // If no results and LLM is configured, try query rewriting
+      if (searchResult.hits.length === 0 && this.llmService.isConfigured()) {
+        console.error(`[MCP Server] Trying query rewrite with LLM...`);
+        
+        // Extract keywords from original question for logging
+        const originalKeywords = this.extractSimpleKeywords(args.question);
+        
+        try {
+          const rewriteResult = await this.llmService.rewriteQuery(
+            args.question,
+            originalKeywords
+          );
+          
+          if (rewriteResult && rewriteResult.terms.length > 0) {
+            console.error(`[MCP Server] Query rewrite generated terms: ${rewriteResult.terms.join(', ')}`);
+            
+            // Try each suggested term until we find results
+            for (const term of rewriteResult.terms) {
+              console.error(`[MCP Server] Trying rewritten query: "${term}"`);
+              const retryResult = await this.memoryManager.search(term, {
+                limit: args.contextLimit || 5,
+              });
+              
+              if (retryResult.hits.length > 0) {
+                console.error(`[MCP Server] Found ${retryResult.hits.length} results with term: "${term}"`);
+                searchResult = retryResult;
+                break;
+              }
+            }
+            
+            // If still no results, try combining top terms as OR query
+            if (searchResult.hits.length === 0 && rewriteResult.terms.length >= 2) {
+              const combinedQuery = rewriteResult.terms.slice(0, 3).join(' OR ');
+              console.error(`[MCP Server] Trying combined OR query: "${combinedQuery}"`);
+              const combinedResult = await this.memoryManager.search(combinedQuery, {
+                limit: args.contextLimit || 5,
+              });
+              
+              if (combinedResult.hits.length > 0) {
+                console.error(`[MCP Server] Found ${combinedResult.hits.length} results with combined query`);
+                searchResult = combinedResult;
+              }
+            }
+          }
+        } catch (rewriteError) {
+          console.error(`[MCP Server] Query rewrite failed: ${(rewriteError as Error).message}`);
+          // Continue with no results
+        }
+      }
       
       if (searchResult.hits.length === 0) {
         return {
@@ -558,6 +608,35 @@ export class MemvidMcpServer {
   private send(message: McpResponse | McpNotification): void {
     const json = JSON.stringify(message);
     process.stdout.write(json + '\n');
+  }
+
+  /**
+   * Extract simple keywords from a question (for passing to query rewriter)
+   */
+  private extractSimpleKeywords(question: string): string[] {
+    // Common stopwords in German and English
+    const stopwords = new Set([
+      // German
+      'der', 'die', 'das', 'den', 'dem', 'ein', 'eine', 'einer', 'eines',
+      'und', 'oder', 'aber', 'wenn', 'weil', 'dass', 'für', 'von', 'mit',
+      'ist', 'sind', 'war', 'waren', 'wird', 'werden', 'hat', 'haben',
+      'ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'mein', 'dein',
+      'was', 'wer', 'wie', 'wo', 'wann', 'warum', 'welche', 'welcher',
+      'nicht', 'noch', 'auch', 'nur', 'schon', 'kann', 'muss', 'soll',
+      // English
+      'the', 'a', 'an', 'and', 'or', 'but', 'if', 'because', 'that', 'for',
+      'is', 'are', 'was', 'were', 'will', 'be', 'been', 'has', 'have',
+      'i', 'you', 'he', 'she', 'it', 'we', 'they', 'my', 'your', 'his',
+      'what', 'who', 'how', 'where', 'when', 'why', 'which',
+      'not', 'also', 'only', 'can', 'must', 'should', 'would', 'could',
+      'about', 'with', 'from', 'to', 'of', 'in', 'on', 'at', 'by',
+    ]);
+    
+    return question
+      .toLowerCase()
+      .replace(/[?!.,;:'"()[\]{}]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 2 && !stopwords.has(word));
   }
 
   /**

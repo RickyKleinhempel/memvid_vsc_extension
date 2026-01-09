@@ -27,6 +27,14 @@ export interface CopilotGenerationResult {
 }
 
 /**
+ * Result from query rewriting
+ */
+export interface CopilotRewriteResult {
+  answer: string;
+  model: string;
+}
+
+/**
  * Copilot LLM Service using VS Code Language Model API
  */
 export class CopilotLlmService {
@@ -177,6 +185,84 @@ Be concise and accurate. Cite specific memories when relevant.`;
         `${systemPrompt}\n\nHere is the relevant context from my agent memory:\n\n${formattedContext}\n\nQuestion: ${question}`
       ),
     ];
+  }
+
+  /**
+   * Rewrite a query to generate better search terms using Copilot
+   * Used when initial search returns no results
+   * @param question - Original user question
+   * @param failedKeywords - Keywords that were already tried
+   * @param modelFamily - Preferred model family
+   * @param cancellationToken - Optional cancellation token
+   */
+  public async rewriteQuery(
+    question: string,
+    failedKeywords: string[],
+    modelFamily?: string,
+    cancellationToken?: vscode.CancellationToken
+  ): Promise<CopilotRewriteResult | null> {
+    try {
+      // Select model
+      let models: vscode.LanguageModelChat[] = [];
+      
+      if (modelFamily) {
+        models = await vscode.lm.selectChatModels({ 
+          vendor: 'copilot', 
+          family: modelFamily 
+        });
+      }
+      
+      if (models.length === 0) {
+        models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+      }
+
+      if (models.length === 0) {
+        console.warn('[Copilot LLM] No Copilot models available for query rewriting');
+        return null;
+      }
+
+      const model = models[0];
+      
+      // Build rewrite prompt
+      const systemPrompt = `You are a search query optimizer. Given a user question, generate alternative search terms that might find relevant information in a memory database.
+
+Rules:
+1. Extract key concepts, nouns, and technical terms
+2. Include synonyms and related terms (e.g., "konzentriertes Arbeiten" → "deep work", "focus", "produktivität")
+3. Include both German and English variations if applicable
+4. Return ONLY a JSON array of search terms, nothing else
+5. Maximum 8 terms, prioritize the most likely matches`;
+
+      const userMessage = `Question: "${question}"
+Previously tried search terms (no results): ${failedKeywords.join(', ')}
+
+Generate alternative search terms that might find relevant information. Return ONLY a JSON array.`;
+
+      const messages = [
+        vscode.LanguageModelChatMessage.User(`${systemPrompt}\n\n${userMessage}`),
+      ];
+      
+      // Send request
+      const response = await model.sendRequest(
+        messages,
+        {},
+        cancellationToken
+      );
+
+      // Collect response text
+      let answer = '';
+      for await (const chunk of response.text) {
+        answer += chunk;
+      }
+
+      return {
+        answer,
+        model: `${model.family} (${model.vendor})`,
+      };
+    } catch (error) {
+      console.error(`[Copilot LLM] Query rewrite error: ${(error as Error).message}`);
+      return null;
+    }
   }
 }
 

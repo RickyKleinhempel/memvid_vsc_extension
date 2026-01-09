@@ -26,6 +26,15 @@ interface LlmGenerateRequest {
 }
 
 /**
+ * Request body for query rewriting
+ */
+interface LlmRewriteRequest {
+  question: string;
+  failedKeywords: string[];
+  modelFamily?: string;
+}
+
+/**
  * Start the bridge server
  * @returns The port the server is listening on
  */
@@ -62,6 +71,8 @@ export async function startBridgeServer(): Promise<number> {
           
           if (url === '/llm/generate') {
             await handleLlmGenerate(body, res);
+          } else if (url === '/llm/rewrite') {
+            await handleLlmRewrite(body, res);
           } else if (url === '/llm/available') {
             await handleLlmAvailable(res);
           } else if (url === '/llm/models') {
@@ -119,6 +130,27 @@ async function handleLlmGenerate(body: string, res: http.ServerResponse): Promis
   } else {
     res.writeHead(503, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Copilot not available or generation failed' }));
+  }
+}
+
+/**
+ * Handle LLM query rewrite request
+ */
+async function handleLlmRewrite(body: string, res: http.ServerResponse): Promise<void> {
+  const request: LlmRewriteRequest = JSON.parse(body);
+  
+  const result = await copilotLlm.rewriteQuery(
+    request.question,
+    request.failedKeywords,
+    request.modelFamily
+  );
+
+  if (result) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(result));
+  } else {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Copilot not available or rewrite failed' }));
   }
 }
 

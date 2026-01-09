@@ -51,6 +51,35 @@ If the context doesn't contain relevant information, say so clearly.
 Be concise and accurate. Cite specific memories when relevant.`;
 
 /**
+ * System prompt for query rewriting
+ */
+const QUERY_REWRITE_PROMPT = `You are a search query optimizer. Given a user question, generate alternative search terms that might find relevant information in a memory database.
+
+Rules:
+1. Extract key concepts, nouns, and technical terms
+2. Include synonyms and related terms (e.g., "konzentriertes Arbeiten" → "deep work", "focus", "produktivität")
+3. Include both German and English variations if applicable
+4. Return ONLY a JSON array of search terms, nothing else
+5. Maximum 8 terms, prioritize the most likely matches
+
+Example:
+Question: "Wann ist die beste Zeit für konzentriertes Arbeiten?"
+Response: ["arbeitszeiten", "produktivität", "deep work", "focus", "morgens", "konzentration", "working hours"]
+
+Question: "Mein Docker Container startet nicht"
+Response: ["docker", "container", "fehler", "error", "startet nicht", "troubleshooting", "docker error"]`;
+
+/**
+ * Query rewrite result
+ */
+export interface QueryRewriteResult {
+  /** Alternative search terms */
+  terms: string[];
+  /** Model used */
+  model: string;
+}
+
+/**
  * LLM Service class for generating answers from context
  */
 export class LlmService {
@@ -318,6 +347,156 @@ export class LlmService {
       provider: 'ollama',
       tokensUsed: data.eval_count,
     };
+  }
+
+  /**
+   * Rewrite a query to generate better search terms using LLM
+   * Used when initial search returns no results
+   * @param question - Original user question
+   * @param failedKeywords - Keywords that were already tried
+   * @returns Array of alternative search terms
+   */
+  public async rewriteQuery(
+    question: string,
+    failedKeywords: string[]
+  ): Promise<QueryRewriteResult | null> {
+    if (!this.isConfigured()) {
+      console.log('[LlmService] Query rewrite skipped - LLM not configured');
+      return null;
+    }
+
+    console.log(`[LlmService] Rewriting query: "${question}"`);
+    console.log(`[LlmService] Failed keywords: ${failedKeywords.join(', ')}`);
+
+    const userMessage = `Question: "${question}"
+Previously tried search terms (no results): ${failedKeywords.join(', ')}
+
+Generate alternative search terms that might find relevant information. Return ONLY a JSON array.`;
+
+    const messages: ChatMessage[] = [
+      { role: 'system', content: QUERY_REWRITE_PROMPT },
+      { role: 'user', content: userMessage },
+    ];
+
+    try {
+      let result: LlmGenerationResult;
+
+      switch (this.config.provider) {
+        case 'copilot':
+          result = await this.callCopilotBridgeForRewrite(question, failedKeywords);
+          break;
+        case 'openai':
+          result = await this.callOpenAI(messages, this.config.openai!);
+          break;
+        case 'azureOpenai':
+          result = await this.callAzureOpenAI(messages, this.config.azureOpenai!);
+          break;
+        case 'ollama':
+          result = await this.callOllama(messages, this.config.ollama!);
+          break;
+        default:
+          return null;
+      }
+
+      // Parse the JSON array from response
+      const terms = this.parseSearchTerms(result.answer);
+      console.log(`[LlmService] Generated search terms: ${terms.join(', ')}`);
+
+      return {
+        terms,
+        model: result.model,
+      };
+    } catch (error) {
+      console.error('[LlmService] Query rewrite failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Call Copilot bridge specifically for query rewriting
+   */
+  private async callCopilotBridgeForRewrite(
+    question: string,
+    failedKeywords: string[]
+  ): Promise<LlmGenerationResult> {
+    if (!this.copilotConfig?.bridgePort) {
+      throw new Error('Copilot bridge not available');
+    }
+
+    const bridgeUrl = `http://127.0.0.1:${this.copilotConfig.bridgePort}/llm/rewrite`;
+    
+    const response = await fetch(bridgeUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        question,
+        failedKeywords,
+        modelFamily: this.copilotConfig.modelFamily,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json() as { error?: string };
+      throw new Error(`Copilot bridge error: ${errorData.error || response.statusText}`);
+    }
+
+    const data = await response.json() as {
+      answer: string;
+      model: string;
+    };
+
+    return {
+      answer: data.answer,
+      model: data.model,
+      provider: 'copilot',
+    };
+  }
+
+  /**
+   * Parse search terms from LLM response
+   * Handles various response formats (JSON array, comma-separated, etc.)
+   */
+  private parseSearchTerms(response: string): string[] {
+    // Clean response - remove markdown code blocks if present
+    let cleaned = response.trim();
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    
+    // Try parsing as JSON array
+    try {
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((term): term is string => typeof term === 'string')
+          .map(term => term.trim().toLowerCase())
+          .filter(term => term.length > 0);
+      }
+    } catch {
+      // Not valid JSON, try alternative parsing
+    }
+
+    // Try extracting JSON array from text
+    const jsonMatch = cleaned.match(/\[[\s\S]*?\]/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((term): term is string => typeof term === 'string')
+            .map(term => term.trim().toLowerCase())
+            .filter(term => term.length > 0);
+        }
+      } catch {
+        // Continue to fallback
+      }
+    }
+
+    // Fallback: split by comma or newline
+    return cleaned
+      .split(/[,\n]+/)
+      .map(term => term.replace(/["\[\]]/g, '').trim().toLowerCase())
+      .filter(term => term.length > 1);
   }
 }
 
