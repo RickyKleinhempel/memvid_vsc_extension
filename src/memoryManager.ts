@@ -309,7 +309,47 @@ export class MemoryManager {
   }
 
   /**
+   * Extract meaningful keywords from a query (removes stopwords)
+   * Supports German and English stopwords
+   */
+  private extractKeywords(query: string): string[] {
+    // German and English stopwords
+    const stopwords = new Set([
+      // German
+      'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einer', 'einem', 'einen',
+      'und', 'oder', 'aber', 'wenn', 'weil', 'dass', 'als', 'auch', 'noch', 'schon',
+      'ist', 'sind', 'war', 'waren', 'wird', 'werden', 'hat', 'haben', 'hatte', 'hatten',
+      'kann', 'können', 'konnte', 'konnten', 'muss', 'müssen', 'soll', 'sollen',
+      'was', 'wer', 'wie', 'wo', 'wann', 'warum', 'welche', 'welcher', 'welches',
+      'ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'mein', 'dein', 'sein', 'ihr',
+      'nicht', 'kein', 'keine', 'keiner', 'nur', 'sehr', 'mehr', 'viel', 'alle', 'alles',
+      'für', 'mit', 'bei', 'von', 'zu', 'nach', 'aus', 'über', 'unter', 'zwischen',
+      'durch', 'gegen', 'ohne', 'um', 'an', 'auf', 'in', 'vor', 'hinter', 'neben',
+      // English
+      'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+      'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those',
+      'i', 'you', 'he', 'she', 'it', 'we', 'they', 'my', 'your', 'his', 'her', 'its',
+      'and', 'or', 'but', 'if', 'because', 'as', 'while', 'of', 'at', 'by', 'for',
+      'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before',
+      'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off',
+      'can', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
+      'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
+    ]);
+
+    // Extract words, filter stopwords and short words
+    const words = query
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ') // Keep letters and numbers (Unicode-aware)
+      .split(/\s+/)
+      .filter(word => word.length > 2 && !stopwords.has(word));
+
+    return [...new Set(words)]; // Remove duplicates
+  }
+
+  /**
    * Search memory by query
+   * Uses keyword extraction and fallback strategy for better results
    * 
    * @param query - Search query string
    * @param options - Search options
@@ -334,11 +374,39 @@ export class MemoryManager {
         }>;
       };
 
-      const result = await mv.find(query, {
+      const searchOptions = {
         k: options.limit || 10,
         mode: options.mode || 'auto',
         snippetChars: options.snippetChars || 240,
-      });
+      };
+
+      // Try original query first
+      let result = await mv.find(query, searchOptions);
+      console.log(`[MemoryManager] Search "${query.substring(0, 50)}..." returned ${result.hits?.length || 0} results`);
+
+      // If no results, try with extracted keywords (OR query)
+      if (!result.hits || result.hits.length === 0) {
+        const keywords = this.extractKeywords(query);
+        console.log(`[MemoryManager] Fallback: extracted keywords: ${keywords.join(', ')}`);
+        
+        if (keywords.length > 0) {
+          // Try OR query with keywords
+          const orQuery = keywords.join(' OR ');
+          result = await mv.find(orQuery, searchOptions);
+          console.log(`[MemoryManager] OR query "${orQuery}" returned ${result.hits?.length || 0} results`);
+          
+          // If still no results, try each keyword individually
+          if (!result.hits || result.hits.length === 0) {
+            for (const keyword of keywords) {
+              result = await mv.find(keyword, searchOptions);
+              if (result.hits && result.hits.length > 0) {
+                console.log(`[MemoryManager] Single keyword "${keyword}" returned ${result.hits.length} results`);
+                break;
+              }
+            }
+          }
+        }
+      }
 
       const hits: SearchHit[] = (result.hits || []).map(hit => ({
         frameId: hit.frameId || '',
@@ -355,7 +423,7 @@ export class MemoryManager {
         : hits;
 
       const searchTimeMs = Date.now() - startTime;
-      console.log(`[MemoryManager] Search "${query}" returned ${filteredHits.length} results in ${searchTimeMs}ms`);
+      console.log(`[MemoryManager] Final search returned ${filteredHits.length} results in ${searchTimeMs}ms`);
 
       return {
         hits: filteredHits,

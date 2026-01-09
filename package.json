@@ -140,7 +140,7 @@
         }
       },
       {
-        "title": "Ollama",
+        "title": "Ollama Embedding",
         "properties": {
           "memvidAgentMemory.ollama.baseUrl": {
             "type": "string",
@@ -157,6 +157,171 @@
               "snowflake-arctic-embed"
             ],
             "description": "Ollama embedding model to use."
+          }
+        }
+      },
+      {
+        "title": "LLM Provider (Answer Generation)",
+        "properties": {
+          "memvidAgentMemory.llmProvider": {
+            "type": "string",
+            "enum": [
+              "none",
+              "copilot",
+              "openai",
+              "azureOpenai",
+              "ollama"
+            ],
+            "default": "none",
+            "enumDescriptions": [
+              "No LLM - Returns context only without synthesis",
+              "GitHub Copilot - Uses your existing Copilot subscription (recommended)",
+              "OpenAI GPT models (gpt-4o, gpt-4o-mini, etc.)",
+              "Azure OpenAI chat models",
+              "Ollama local chat models (llama3, mistral, etc.)"
+            ],
+            "description": "LLM provider for generating answers from retrieved context. If 'none', memvid_ask returns context snippets only."
+          }
+        }
+      },
+      {
+        "title": "LLM - GitHub Copilot",
+        "properties": {
+          "memvidAgentMemory.llmCopilot.modelFamily": {
+            "type": "string",
+            "default": "gpt-4o",
+            "enum": [
+              "gpt-4o",
+              "gpt-4o-mini",
+              "claude-3.5-sonnet",
+              "o1",
+              "o1-mini"
+            ],
+            "enumDescriptions": [
+              "GPT-4o - Best balance of speed and quality",
+              "GPT-4o Mini - Faster, more cost-effective",
+              "Claude 3.5 Sonnet - Anthropic's latest model",
+              "o1 - OpenAI reasoning model",
+              "o1-mini - Smaller reasoning model"
+            ],
+            "description": "Preferred Copilot model family. Availability depends on your Copilot subscription."
+          }
+        }
+      },
+      {
+        "title": "LLM - OpenAI",
+        "properties": {
+          "memvidAgentMemory.llmOpenai.apiKey": {
+            "type": "string",
+            "default": "",
+            "description": "OpenAI API Key for LLM. Leave empty to use the embedding API key."
+          },
+          "memvidAgentMemory.llmOpenai.baseUrl": {
+            "type": "string",
+            "default": "https://api.openai.com/v1",
+            "description": "OpenAI API Base URL for LLM. Change for OpenAI-compatible endpoints."
+          },
+          "memvidAgentMemory.llmOpenai.model": {
+            "type": "string",
+            "default": "gpt-4o-mini",
+            "enum": [
+              "gpt-4o",
+              "gpt-4o-mini",
+              "gpt-4-turbo",
+              "gpt-3.5-turbo"
+            ],
+            "description": "OpenAI chat model to use for answer generation."
+          },
+          "memvidAgentMemory.llmOpenai.maxTokens": {
+            "type": "number",
+            "default": 1024,
+            "minimum": 100,
+            "maximum": 16384,
+            "description": "Maximum tokens for LLM response."
+          },
+          "memvidAgentMemory.llmOpenai.temperature": {
+            "type": "number",
+            "default": 0.7,
+            "minimum": 0,
+            "maximum": 2,
+            "description": "Temperature for LLM generation (0 = deterministic, higher = more creative)."
+          }
+        }
+      },
+      {
+        "title": "LLM - Azure OpenAI",
+        "properties": {
+          "memvidAgentMemory.llmAzureOpenai.endpoint": {
+            "type": "string",
+            "default": "",
+            "description": "Azure OpenAI endpoint URL for LLM. Leave empty to use the embedding endpoint."
+          },
+          "memvidAgentMemory.llmAzureOpenai.apiKey": {
+            "type": "string",
+            "default": "",
+            "description": "Azure OpenAI API Key for LLM. Leave empty to use the embedding API key."
+          },
+          "memvidAgentMemory.llmAzureOpenai.deploymentName": {
+            "type": "string",
+            "default": "",
+            "description": "Azure OpenAI deployment name for chat model (e.g., gpt-4o)."
+          },
+          "memvidAgentMemory.llmAzureOpenai.apiVersion": {
+            "type": "string",
+            "default": "2024-02-01",
+            "description": "Azure OpenAI API version for LLM."
+          },
+          "memvidAgentMemory.llmAzureOpenai.maxTokens": {
+            "type": "number",
+            "default": 1024,
+            "minimum": 100,
+            "maximum": 16384,
+            "description": "Maximum tokens for LLM response."
+          },
+          "memvidAgentMemory.llmAzureOpenai.temperature": {
+            "type": "number",
+            "default": 0.7,
+            "minimum": 0,
+            "maximum": 2,
+            "description": "Temperature for LLM generation."
+          }
+        }
+      },
+      {
+        "title": "LLM - Ollama",
+        "properties": {
+          "memvidAgentMemory.llmOllama.baseUrl": {
+            "type": "string",
+            "default": "http://localhost:11434",
+            "description": "Ollama server URL for LLM. Leave empty to use the embedding server URL."
+          },
+          "memvidAgentMemory.llmOllama.model": {
+            "type": "string",
+            "default": "llama3.2",
+            "enum": [
+              "llama3.2",
+              "llama3.1",
+              "mistral",
+              "mixtral",
+              "phi3",
+              "gemma2",
+              "qwen2.5"
+            ],
+            "description": "Ollama chat model to use for answer generation."
+          },
+          "memvidAgentMemory.llmOllama.maxTokens": {
+            "type": "number",
+            "default": 1024,
+            "minimum": 100,
+            "maximum": 16384,
+            "description": "Maximum tokens for LLM response."
+          },
+          "memvidAgentMemory.llmOllama.temperature": {
+            "type": "number",
+            "default": 0.7,
+            "minimum": 0,
+            "maximum": 2,
+            "description": "Temperature for LLM generation."
           }
         }
       }

@@ -5,7 +5,18 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import type { ExtensionConfig, OpenAIConfig, AzureOpenAIConfig, OllamaConfig, EmbeddingConfig } from '../types/index.js';
+import type { 
+  ExtensionConfig, 
+  OpenAIConfig, 
+  AzureOpenAIConfig, 
+  OllamaConfig, 
+  EmbeddingConfig,
+  LlmProviderType,
+  OpenAILlmConfig,
+  AzureOpenAILlmConfig,
+  OllamaLlmConfig,
+  LlmConfig,
+} from '../types/index.js';
 
 /** Configuration section name */
 const CONFIG_SECTION = 'memvidAgentMemory';
@@ -92,6 +103,167 @@ export function getEmbeddingConfig(): EmbeddingConfig {
   }
 
   return embeddingConfig;
+}
+
+/**
+ * Get LLM provider setting
+ * @returns LLM provider type
+ */
+export function getLlmProvider(): LlmProviderType {
+  const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+  return config.get<LlmProviderType>('llmProvider', 'none');
+}
+
+/**
+ * Get Copilot LLM configuration
+ * @returns Copilot LLM model family preference
+ */
+export function getCopilotLlmConfig(): { modelFamily: string } {
+  const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+  return {
+    modelFamily: config.get<string>('llmCopilot.modelFamily', 'gpt-4o'),
+  };
+}
+
+/**
+ * Get OpenAI LLM configuration
+ * @returns OpenAI LLM config with fallback to embedding API key
+ */
+export function getOpenAILlmConfig(): OpenAILlmConfig {
+  const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+  const embeddingConfig = getOpenAIConfig();
+  
+  return {
+    apiKey: config.get<string>('llmOpenai.apiKey', '') || embeddingConfig.apiKey,
+    baseUrl: config.get<string>('llmOpenai.baseUrl', 'https://api.openai.com/v1'),
+    model: config.get<string>('llmOpenai.model', 'gpt-4o-mini'),
+    maxTokens: config.get<number>('llmOpenai.maxTokens', 1024),
+    temperature: config.get<number>('llmOpenai.temperature', 0.7),
+  };
+}
+
+/**
+ * Get Azure OpenAI LLM configuration
+ * @returns Azure OpenAI LLM config with fallback to embedding config
+ */
+export function getAzureOpenAILlmConfig(): AzureOpenAILlmConfig {
+  const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+  const embeddingConfig = getAzureOpenAIConfig();
+  
+  return {
+    endpoint: config.get<string>('llmAzureOpenai.endpoint', '') || embeddingConfig.endpoint,
+    apiKey: config.get<string>('llmAzureOpenai.apiKey', '') || embeddingConfig.apiKey,
+    deploymentName: config.get<string>('llmAzureOpenai.deploymentName', ''),
+    apiVersion: config.get<string>('llmAzureOpenai.apiVersion', '2024-02-01'),
+    maxTokens: config.get<number>('llmAzureOpenai.maxTokens', 1024),
+    temperature: config.get<number>('llmAzureOpenai.temperature', 0.7),
+  };
+}
+
+/**
+ * Get Ollama LLM configuration
+ * @returns Ollama LLM config with fallback to embedding server URL
+ */
+export function getOllamaLlmConfig(): OllamaLlmConfig {
+  const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+  const embeddingConfig = getOllamaConfig();
+  
+  return {
+    baseUrl: config.get<string>('llmOllama.baseUrl', '') || embeddingConfig.baseUrl,
+    model: config.get<string>('llmOllama.model', 'llama3.2'),
+    maxTokens: config.get<number>('llmOllama.maxTokens', 1024),
+    temperature: config.get<number>('llmOllama.temperature', 0.7),
+  };
+}
+
+/**
+ * Get complete LLM configuration based on selected provider
+ * @returns Complete LLM configuration
+ */
+export function getLlmConfig(): LlmConfig {
+  const provider = getLlmProvider();
+  
+  const llmConfig: LlmConfig = {
+    provider,
+  };
+
+  switch (provider) {
+    case 'openai':
+      llmConfig.openai = getOpenAILlmConfig();
+      break;
+    case 'azureOpenai':
+      llmConfig.azureOpenai = getAzureOpenAILlmConfig();
+      break;
+    case 'ollama':
+      llmConfig.ollama = getOllamaLlmConfig();
+      break;
+  }
+
+  return llmConfig;
+}
+
+/**
+ * Validate LLM configuration
+ * @returns Validation result with message
+ */
+export function validateLlmConfig(): { valid: boolean; message?: string } {
+  const provider = getLlmProvider();
+  
+  switch (provider) {
+    case 'none':
+      return { 
+        valid: true, 
+        message: 'No LLM provider configured. memvid_ask will return context only without AI synthesis.',
+      };
+    
+    case 'copilot':
+      // Copilot uses VS Code's Language Model API - requires active Copilot subscription
+      return { 
+        valid: true, 
+        message: 'Using GitHub Copilot for answer generation. Requires active Copilot subscription.',
+      };
+    
+    case 'openai': {
+      const config = getOpenAILlmConfig();
+      if (!config.apiKey) {
+        return {
+          valid: false,
+          message: 'OpenAI API key is not configured for LLM. Set it in extension settings or via OPENAI_API_KEY environment variable.',
+        };
+      }
+      return { valid: true };
+    }
+    
+    case 'azureOpenai': {
+      const config = getAzureOpenAILlmConfig();
+      if (!config.endpoint) {
+        return {
+          valid: false,
+          message: 'Azure OpenAI endpoint is not configured for LLM.',
+        };
+      }
+      if (!config.apiKey) {
+        return {
+          valid: false,
+          message: 'Azure OpenAI API key is not configured for LLM.',
+        };
+      }
+      if (!config.deploymentName) {
+        return {
+          valid: false,
+          message: 'Azure OpenAI LLM deployment name is not configured.',
+        };
+      }
+      return { valid: true };
+    }
+    
+    case 'ollama':
+      // Ollama doesn't require API keys
+      return { valid: true };
+    
+    default:
+      return { valid: false, message: `Unknown LLM provider: ${provider}` };
+  }
 }
 
 /**

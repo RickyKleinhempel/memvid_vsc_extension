@@ -83,6 +83,8 @@ export interface AskOptions {
   model?: string;
   /** If true, return only context without LLM synthesis */
   contextOnly?: boolean;
+  /** System prompt for LLM */
+  systemPrompt?: string;
 }
 
 /**
@@ -191,6 +193,69 @@ export interface EmbeddingConfig {
   openai?: OpenAIConfig;
   azureOpenai?: AzureOpenAIConfig;
   ollama?: OllamaConfig;
+}
+
+/**
+ * LLM provider type for answer generation
+ */
+export type LlmProviderType = 'none' | 'copilot' | 'openai' | 'azureOpenai' | 'ollama';
+
+/**
+ * OpenAI LLM configuration settings
+ */
+export interface OpenAILlmConfig {
+  /** API Key */
+  apiKey: string;
+  /** Base URL for API */
+  baseUrl: string;
+  /** Chat model */
+  model: string;
+  /** Max tokens for response */
+  maxTokens: number;
+  /** Temperature for generation */
+  temperature: number;
+}
+
+/**
+ * Azure OpenAI LLM configuration settings
+ */
+export interface AzureOpenAILlmConfig {
+  /** Azure endpoint URL */
+  endpoint: string;
+  /** API Key */
+  apiKey: string;
+  /** Deployment name for chat model */
+  deploymentName: string;
+  /** API version */
+  apiVersion: string;
+  /** Max tokens for response */
+  maxTokens: number;
+  /** Temperature for generation */
+  temperature: number;
+}
+
+/**
+ * Ollama LLM configuration settings
+ */
+export interface OllamaLlmConfig {
+  /** Ollama server URL */
+  baseUrl: string;
+  /** Chat model */
+  model: string;
+  /** Max tokens for response */
+  maxTokens: number;
+  /** Temperature for generation */
+  temperature: number;
+}
+
+/**
+ * Complete LLM configuration for answer generation
+ */
+export interface LlmConfig {
+  provider: LlmProviderType;
+  openai?: OpenAILlmConfig;
+  azureOpenai?: AzureOpenAILlmConfig;
+  ollama?: OllamaLlmConfig;
 }
 
 /**

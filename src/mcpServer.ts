@@ -6,6 +6,7 @@
 
 import { MemoryManager } from './memoryManager.js';
 import { allToolSchemas } from './tools/schemas.js';
+import { LlmService, createLlmServiceFromEnv } from './services/llmService.js';
 import type {
   StoreToolInput,
   SearchToolInput,
@@ -99,11 +100,13 @@ function getEmbeddingConfigFromEnv(): EmbeddingConfig {
  */
 export class MemvidMcpServer {
   private memoryManager: MemoryManager;
+  private llmService: LlmService;
   private buffer: string = '';
   private initialized: boolean = false;
 
   constructor() {
     this.memoryManager = MemoryManager.getInstance();
+    this.llmService = createLlmServiceFromEnv();
   }
 
   /**
@@ -117,6 +120,7 @@ export class MemvidMcpServer {
     
     console.error(`[MCP Server] Embedding provider: ${embeddingConfig.provider}`);
     console.error(`[MCP Server] Semantic search enabled: ${enableSemanticSearch}`);
+    console.error(`[MCP Server] LLM provider: ${process.env.MEMVID_LLM_PROVIDER || 'none'}`);
     
     try {
       await this.memoryManager.initialize(memoryPath, true, embeddingConfig);
@@ -354,52 +358,96 @@ export class MemvidMcpServer {
 
   /**
    * Handle memvid_ask tool call
+   * Uses LLM to generate answer from retrieved context if configured
    */
   private async handleAsk(args: AskToolInput): Promise<McpToolResponse> {
     try {
-      const result = await this.memoryManager.ask(args.question, {
-        contextLimit: args.contextLimit,
+      console.error(`[MCP Server] Ask: "${args.question}"`);
+      console.error(`[MCP Server] LLM provider: ${process.env.MEMVID_LLM_PROVIDER}`);
+      console.error(`[MCP Server] Bridge port: ${process.env.MEMVID_BRIDGE_PORT}`);
+      console.error(`[MCP Server] LLM configured: ${this.llmService.isConfigured()}`);
+      
+      // First, check if memory has any entries
+      const stats = await this.memoryManager.getStats();
+      console.error(`[MCP Server] Memory stats: ${stats.frameCount} entries, ${stats.sizeFormatted}`);
+      
+      if (stats.frameCount === 0) {
+        return {
+          content: [{
+            type: 'text',
+            text: '📭 **Memory is empty.** No information has been stored yet.\n\nUse `memvid_store` to add information to memory first.\n\nExample:\n```\nmemvid_store: title="User Preference", content="User prefers dark mode", label="preferences"\n```',
+          }],
+        };
+      }
+      
+      // Retrieve relevant context from memory
+      const searchResult = await this.memoryManager.search(args.question, { 
+        limit: args.contextLimit || 5,
       });
+      
+      console.error(`[MCP Server] Search found ${searchResult.hits.length} hits`);
+      
+      if (searchResult.hits.length === 0) {
+        return {
+          content: [{
+            type: 'text',
+            text: `🔍 **No relevant memories found** for: "${args.question}"\n\nMemory contains ${stats.frameCount} entries, but none matched your query.\n\nTry:\n- Using different keywords\n- Asking about topics that have been stored\n- Use \`memvid_timeline\` to see what's in memory`,
+          }],
+        };
+      }
+
+      // Check if LLM is configured for answer generation
+      if (this.llmService.isConfigured()) {
+        console.error(`[MCP Server] Calling LLM for answer generation...`);
+        try {
+          const llmResult = await this.llmService.generateAnswer(
+            args.question,
+            searchResult.hits
+          );
+          
+          console.error(`[MCP Server] LLM result: ${llmResult ? 'success' : 'null'}`);
+          
+          if (llmResult) {
+            // Format answer with context sources
+            const sourcesInfo = searchResult.hits.slice(0, 3).map((hit, i) => 
+              `[${i + 1}] ${hit.title}`
+            ).join(', ');
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `${llmResult.answer}\n\n---\n*Sources: ${sourcesInfo}*\n*Model: ${llmResult.model} (${llmResult.provider})*`,
+              }],
+            };
+          }
+        } catch (llmError) {
+          console.error(`[MCP Server] LLM generation failed: ${(llmError as Error).message}`);
+          // Fall through to context-only response
+        }
+      } else {
+        console.error(`[MCP Server] LLM not configured, returning context only`);
+      }
+
+      // No LLM configured or LLM failed - return context only
+      const context = searchResult.hits.map((hit, i) => 
+        `**[${i + 1}] ${hit.title}**\n${hit.snippet}`
+      ).join('\n\n');
 
       return {
         content: [{
           type: 'text',
-          text: result.text,
+          text: `Based on my memory (${searchResult.hits.length} relevant entries):\n\n${context}`,
         }],
       };
     } catch (error) {
-      // Fall back to search if RAG fails
-      try {
-        const searchResult = await this.memoryManager.search(args.question, { limit: 5 });
-        
-        if (searchResult.hits.length === 0) {
-          return {
-            content: [{
-              type: 'text',
-              text: 'I don\'t have any relevant information in my memory about that.',
-            }],
-          };
-        }
-
-        const context = searchResult.hits.map(hit => 
-          `- ${hit.title}: ${hit.snippet}`
-        ).join('\n');
-
-        return {
-          content: [{
-            type: 'text',
-            text: `Based on my memory:\n\n${context}`,
-          }],
-        };
-      } catch {
-        return {
-          content: [{
-            type: 'text',
-            text: `Query failed: ${(error as Error).message}`,
-          }],
-          isError: true,
-        };
-      }
+      console.error(`[MCP Server] Ask error: ${(error as Error).message}`);
+      return {
+        content: [{
+          type: 'text',
+          text: `Query failed: ${(error as Error).message}`,
+        }],
+        isError: true,
+      };
     }
   }
 

@@ -11,12 +11,16 @@ import * as path from 'path';
 import { MemvidMcpProvider } from './mcpProvider.js';
 import { registerCommands } from './commands.js';
 import { onConfigurationChange, getMemoryFilePath } from './config/settings.js';
+import { startBridgeServer, stopBridgeServer, getBridgePort } from './services/bridgeServer.js';
 
 /** Output channel for extension logging */
 let outputChannel: vscode.OutputChannel;
 
 /** MCP Provider instance */
 let mcpProvider: MemvidMcpProvider | undefined;
+
+/** Bridge server port for Copilot LLM access */
+let bridgePort: number | undefined;
 
 /**
  * Log a message to the output channel
@@ -44,7 +48,7 @@ function ensureStorageDirectory(globalStoragePath: string): void {
  * 
  * @param context - Extension context provided by VS Code
  */
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
   // Create output channel for logging
   outputChannel = vscode.window.createOutputChannel('Memvid Agent Memory');
   context.subscriptions.push(outputChannel);
@@ -58,8 +62,17 @@ export function activate(context: vscode.ExtensionContext): void {
   // Ensure storage directory exists
   ensureStorageDirectory(globalStoragePath);
 
-  // Create MCP provider
-  mcpProvider = new MemvidMcpProvider(extensionPath, globalStoragePath);
+  // Start bridge server for Copilot LLM access
+  try {
+    bridgePort = await startBridgeServer();
+    log(`Bridge server started on port ${bridgePort}`);
+  } catch (error) {
+    log(`Failed to start bridge server: ${(error as Error).message}`);
+    // Continue without bridge - Copilot LLM won't be available
+  }
+
+  // Create MCP provider (with bridge port for Copilot access)
+  mcpProvider = new MemvidMcpProvider(extensionPath, globalStoragePath, bridgePort);
   
   // Register MCP server definition provider
   try {
@@ -135,6 +148,10 @@ async function showWelcomeMessage(context: vscode.ExtensionContext): Promise<voi
  */
 export function deactivate(): void {
   log('Memvid Agent Memory extension is deactivating...');
+  
+  // Stop bridge server
+  stopBridgeServer();
+  log('Bridge server stopped');
   
   if (mcpProvider) {
     mcpProvider.dispose();
