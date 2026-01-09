@@ -4,9 +4,10 @@ src/**
 .gitignore
 .eslintrc.json
 tsconfig.json
+esbuild.js
 **/*.map
 **/*.ts
-node_modules/**
+!**/*.d.ts
 coverage/**
 .nyc_output/**
 *.md

@@ -2,7 +2,7 @@
   "name": "memvid-agent-memory",
   "displayName": "Memvid Agent Memory",
   "description": "Provides persistent AI Agent Memory using Memvid for GitHub Copilot agents. Automatically registers MCP tools for storing, searching, and retrieving agent memory.",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "publisher": "RickyKleinhempel",
   "license": "MIT",
   "repository": {
@@ -350,19 +350,23 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run package-ext",
+    "compile": "npm run check-types && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "check-types": "tsc --noEmit",
+    "package-ext": "npm run check-types && node esbuild.js --production",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
     "package": "vsce package",
     "publish": "vsce publish"
   },
-  "dependencies": {
-    "@memvid/sdk": "^2.0.146",
-    "@modelcontextprotocol/sdk": "^1.0.0"
-  },
+  "bundledDependencies": [
+    "@memvid/sdk",
+    "@modelcontextprotocol/sdk"
+  ],
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.102.0",
@@ -370,7 +374,17 @@
     "@typescript-eslint/parser": "^7.0.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.27.2",
     "eslint": "^8.56.0",
+    "npm-run-all": "^4.1.5",
     "typescript": "^5.3.0"
-  }
+  },
+  "dependencies": {
+    "@memvid/sdk": "^2.0.146",
+    "@modelcontextprotocol/sdk": "^1.25.2"
+  },
+  "bundleDependencies": [
+    "@memvid/sdk",
+    "@modelcontextprotocol/sdk"
+  ]
 }

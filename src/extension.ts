@@ -7,6 +7,8 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
+import { execSync } from 'child_process';
 import { MemvidMcpProvider } from './mcpProvider.js';
 import { registerCommands } from './commands.js';
 import { onConfigurationChange, getMemoryFilePath } from './config/settings.js';
@@ -42,6 +44,65 @@ function ensureStorageDirectory(globalStoragePath: string): void {
 }
 
 /**
+ * Check if @memvid/sdk is installed in the extension directory
+ * @param extensionPath - Extension installation path
+ * @returns true if SDK is available
+ */
+function isSdkInstalled(extensionPath: string): boolean {
+  const sdkPath = path.join(extensionPath, 'node_modules', '@memvid', 'sdk');
+  return fs.existsSync(sdkPath);
+}
+
+/**
+ * Install the Memvid SDK in the extension directory
+ * @param extensionPath - Extension installation path
+ */
+async function installSdk(extensionPath: string): Promise<void> {
+  log('Installing @memvid/sdk...');
+  
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: 'Memvid: Installing dependencies...',
+      cancellable: false,
+    },
+    async (progress) => {
+      try {
+        progress.report({ message: 'This may take a minute...' });
+        
+        // Run npm install in extension directory
+        execSync('npm install --omit=dev --no-save', {
+          cwd: extensionPath,
+          stdio: 'pipe',
+          timeout: 120000, // 2 minutes timeout
+        });
+        
+        log('SDK installed successfully');
+        vscode.window.showInformationMessage('Memvid: Dependencies installed successfully. Please reload the window.');
+        
+        // Offer to reload
+        const reload = await vscode.window.showInformationMessage(
+          'Memvid dependencies installed. Reload window to activate?',
+          'Reload Now',
+          'Later'
+        );
+        
+        if (reload === 'Reload Now') {
+          vscode.commands.executeCommand('workbench.action.reloadWindow');
+        }
+      } catch (error) {
+        const errorMsg = (error as Error).message;
+        log(`Failed to install SDK: ${errorMsg}`);
+        vscode.window.showErrorMessage(
+          `Memvid: Failed to install dependencies. ${errorMsg}\n\n` +
+          `Try running manually: cd "${extensionPath}" && npm install`
+        );
+      }
+    }
+  );
+}
+
+/**
  * Activate the extension
  * Called by VS Code when the extension is activated
  * 
@@ -60,6 +121,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Ensure storage directory exists
   ensureStorageDirectory(globalStoragePath);
+
+  // Check if SDK is installed, if not offer to install
+  if (!isSdkInstalled(extensionPath)) {
+    log('Memvid SDK not found, offering to install...');
+    
+    const choice = await vscode.window.showWarningMessage(
+      'Memvid Agent Memory: Required dependencies not found. Install now?',
+      'Install',
+      'Cancel'
+    );
+    
+    if (choice === 'Install') {
+      await installSdk(extensionPath);
+      return; // Exit activation, will complete after reload
+    } else {
+      vscode.window.showErrorMessage(
+        'Memvid Agent Memory requires dependencies to be installed. ' +
+        'Run "Memvid: Initialize Memory" command to install later.'
+      );
+    }
+  }
 
   // Start bridge server for Copilot LLM access
   try {
