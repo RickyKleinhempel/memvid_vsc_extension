@@ -482,17 +482,17 @@ export class MemoryManager {
   }
 
   /**
-   * Get recent entries in chronological order
+   * Get recent entries in reverse chronological order (newest first)
    * 
    * @param limit - Maximum number of entries to return
-   * @returns Array of timeline entries
+   * @returns Array of timeline entries (newest first)
    */
   public async getTimeline(limit: number = 20): Promise<TimelineEntry[]> {
     this.ensureInitialized();
 
     try {
       const mv = this.memory as {
-        timeline?: (options?: { limit: number }) => Promise<Array<Record<string, unknown>>>;
+        timeline?: (options?: { limit?: number; reverse?: boolean }) => Promise<Array<Record<string, unknown>>>;
         find: (query: string, options?: unknown) => Promise<{
           hits: Array<Record<string, unknown>>;
         }>;
@@ -500,8 +500,9 @@ export class MemoryManager {
 
       // Try timeline method first if available
       if (typeof mv.timeline === 'function') {
-        const entries = await mv.timeline({ limit });
-        console.log(`[MemoryManager] Timeline returned ${entries?.length || 0} entries`);
+        // reverse: true returns newest entries first (DESC order)
+        const entries = await mv.timeline({ limit, reverse: true });
+        console.log(`[MemoryManager] Timeline returned ${entries?.length || 0} entries (reverse order)`);
         
         if (entries && entries.length > 0) {
           // Log first entry structure for debugging
