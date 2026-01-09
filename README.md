@@ -1,13 +1,15 @@
 # Memvid Agent Memory
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/memvid.memvid-agent-memory?label=VS%20Code%20Marketplace&color=blue)](https://marketplace.visualstudio.com/items?itemName=memvid.memvid-agent-memory)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/RickyKleinhempel.memvid-agent-memory?label=VS%20Code%20Marketplace&color=blue)](https://marketplace.visualstudio.com/items?itemName=RickyKleinhempel.memvid-agent-memory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > **Give your AI agents a memory that lasts.**
 
+⚠️ **Community Extension** - This is an unofficial VS Code extension built using the [Memvid](https://github.com/Olow304/memvid) framework. Not affiliated with the Memvid team.
+
 Memvid Agent Memory gives GitHub Copilot persistent memory capabilities. Your AI assistant can now remember information across sessions, search through past conversations, and provide contextual answers based on stored knowledge.
 
-![Memvid Demo](https://raw.githubusercontent.com/memvid/memvid-vscode-extension/main/images/demo.gif)
+![Memvid Demo](https://raw.githubusercontent.com/RickyKleinhempel/memvid-vscode-extension/main/images/demo.gif)
 
 ---
 
@@ -160,8 +162,8 @@ Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and type "Memvid":
 - Use `memvid_timeline` to see what's stored
 
 **Need help?**
-- [Open an issue](https://github.com/memvid/memvid-vscode-extension/issues)
-- [View documentation](https://docs.memvid.com/)
+- [Open an issue](https://github.com/RickyKleinhempel/memvid-vscode-extension/issues)
+- [Memvid Documentation](https://github.com/Olow304/memvid)
 
 ---
 
@@ -172,5 +174,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  Made with ❤️ by the <a href="https://github.com/memvid">Memvid</a> team
+  Made with ❤️ using the <a href="https://github.com/Olow304/memvid">Memvid</a> framework
 </p>
