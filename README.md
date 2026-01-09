@@ -9,7 +9,7 @@
 
 Memvid Agent Memory gives GitHub Copilot persistent memory capabilities. Your AI assistant can now remember information across sessions, search through past conversations, and provide contextual answers based on stored knowledge.
 
-![Memvid Demo](https://raw.githubusercontent.com/RickyKleinhempel/memvid-vscode-extension/main/images/demo.gif)
+![Memvid Demo](https://raw.githubusercontent.com/RickyKleinhempel/memvid_vsc_extension/main/images/demo.gif)
 
 ---
 
@@ -162,7 +162,7 @@ Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and type "Memvid":
 - Use `memvid_timeline` to see what's stored
 
 **Need help?**
-- [Open an issue](https://github.com/RickyKleinhempel/memvid-vscode-extension/issues)
+- [Open an issue](https://github.com/RickyKleinhempel/memvid_vsc_extension/issues)
 - [Memvid Documentation](https://github.com/Olow304/memvid)
 
 ---

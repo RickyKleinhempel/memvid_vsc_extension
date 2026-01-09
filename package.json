@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RickyKleinhempel/memvid-vscode-extension"
+    "url": "https://github.com/RickyKleinhempel/memvid_vsc_extension"
   },
   "engines": {
     "vscode": "^1.102.0"
