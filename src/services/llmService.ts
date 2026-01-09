@@ -495,7 +495,7 @@ Generate alternative search terms that might find relevant information. Return O
     // Fallback: split by comma or newline
     return cleaned
       .split(/[,\n]+/)
-      .map(term => term.replace(/["\[\]]/g, '').trim().toLowerCase())
+      .map(term => term.replace(/["[\]]/g, '').trim().toLowerCase())
       .filter(term => term.length > 1);
   }
 }

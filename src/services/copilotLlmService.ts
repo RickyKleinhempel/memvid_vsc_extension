@@ -9,14 +9,6 @@
 import * as vscode from 'vscode';
 
 /**
- * Message format for chat
- */
-interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-/**
  * Result from Copilot LLM generation
  */
 export interface CopilotGenerationResult {

@@ -6,7 +6,6 @@
  */
 
 import * as http from 'http';
-import * as vscode from 'vscode';
 import { copilotLlm } from './copilotLlmService.js';
 
 /** Bridge server port (random available port) */

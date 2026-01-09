@@ -7,7 +7,6 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as path from 'path';
 import { MemvidMcpProvider } from './mcpProvider.js';
 import { registerCommands } from './commands.js';
 import { onConfigurationChange, getMemoryFilePath } from './config/settings.js';
@@ -99,7 +98,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   log('Commands registered');
 
   // Listen for configuration changes
-  const configDisposable = onConfigurationChange((e) => {
+  const configDisposable = onConfigurationChange(() => {
     log('Configuration changed, refreshing MCP provider...');
     mcpProvider?.refresh();
   });

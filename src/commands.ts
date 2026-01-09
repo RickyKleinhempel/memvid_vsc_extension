@@ -50,7 +50,6 @@ export function registerCommands(
       }
 
       // Open the folder containing the memory file
-      const folderUri = vscode.Uri.file(memoryPath).with({ path: vscode.Uri.file(memoryPath).path.replace(/[^/]+$/, '') });
       await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(memoryPath));
     })
   );
@@ -105,15 +104,6 @@ export function registerCommands(
         await manager.initialize(memoryPath, false);
         const stats = await manager.getStats();
         await manager.close();
-
-        // Show stats in a quick pick or information message
-        const statsMessage = [
-          `📊 Memory Statistics`,
-          ``,
-          `Entries: ${stats.frameCount}`,
-          `Size: ${stats.sizeFormatted}`,
-          `Location: ${memoryPath}`,
-        ].join('\n');
 
         // Show as information message with option to open file
         const choice = await vscode.window.showInformationMessage(
