@@ -1,0 +1,183 @@
+{
+  "name": "memvid-agent-memory",
+  "displayName": "Memvid Agent Memory",
+  "description": "Provides persistent AI Agent Memory using Memvid for GitHub Copilot agents. Automatically registers MCP tools for storing, searching, and retrieving agent memory.",
+  "version": "0.1.0",
+  "publisher": "memvid",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/memvid/memvid-vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.102.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "memvid",
+    "agent",
+    "memory",
+    "copilot",
+    "mcp",
+    "ai",
+    "rag",
+    "vector-search"
+  ],
+  "icon": "images/icon.png",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "memvid-agent-memory.mcp-server",
+        "label": "Memvid Agent Memory"
+      }
+    ],
+    "configuration": {
+      "title": "Memvid Agent Memory",
+      "properties": {
+        "memvidAgentMemory.memoryFilePath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to the memory file (.mv2). If empty, uses workspace .memvid/agent-memory.mv2 or global storage."
+        },
+        "memvidAgentMemory.embeddingProvider": {
+          "type": "string",
+          "enum": [
+            "none",
+            "local",
+            "openai",
+            "azureOpenai",
+            "ollama",
+            "cohere",
+            "voyage"
+          ],
+          "default": "none",
+          "enumDescriptions": [
+            "No embeddings - BM25 keyword search only",
+            "Local embeddings (bge-small, nomic) - Not available on Windows",
+            "OpenAI embeddings (text-embedding-3-small) - Requires OPENAI_API_KEY",
+            "Azure OpenAI embeddings - Requires endpoint and API key configuration",
+            "Ollama local embeddings - Requires local Ollama server",
+            "Cohere embeddings - Requires COHERE_API_KEY",
+            "Voyage embeddings - Requires VOYAGE_API_KEY"
+          ],
+          "description": "Embedding provider for semantic search."
+        },
+        "memvidAgentMemory.openai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API Key. Can also be set via OPENAI_API_KEY environment variable."
+        },
+        "memvidAgentMemory.openai.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "OpenAI API Base URL. Change for OpenAI-compatible endpoints."
+        },
+        "memvidAgentMemory.openai.model": {
+          "type": "string",
+          "default": "text-embedding-3-small",
+          "description": "OpenAI embedding model to use."
+        },
+        "memvidAgentMemory.azureOpenai.endpoint": {
+          "type": "string",
+          "default": "",
+          "description": "Azure OpenAI endpoint URL (e.g., https://your-resource.openai.azure.com)"
+        },
+        "memvidAgentMemory.azureOpenai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Azure OpenAI API Key. Can also be set via AZURE_OPENAI_API_KEY environment variable."
+        },
+        "memvidAgentMemory.azureOpenai.deploymentName": {
+          "type": "string",
+          "default": "",
+          "description": "Azure OpenAI deployment name for embeddings."
+        },
+        "memvidAgentMemory.azureOpenai.apiVersion": {
+          "type": "string",
+          "default": "2024-02-01",
+          "description": "Azure OpenAI API version."
+        },
+        "memvidAgentMemory.ollama.baseUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama server URL."
+        },
+        "memvidAgentMemory.ollama.model": {
+          "type": "string",
+          "default": "nomic-embed-text",
+          "enum": [
+            "nomic-embed-text",
+            "mxbai-embed-large",
+            "all-minilm",
+            "snowflake-arctic-embed"
+          ],
+          "description": "Ollama embedding model to use."
+        },
+        "memvidAgentMemory.autoCreateMemory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically create memory file if it doesn't exist."
+        },
+        "memvidAgentMemory.enableSemanticSearch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable semantic/vector search in addition to keyword search."
+        },
+        "memvidAgentMemory.defaultSearchLimit": {
+          "type": "number",
+          "default": 10,
+          "description": "Default number of results to return from search queries."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "memvidAgentMemory.openMemory",
+        "title": "Memvid: Open Agent Memory File"
+      },
+      {
+        "command": "memvidAgentMemory.clearMemory",
+        "title": "Memvid: Clear Agent Memory"
+      },
+      {
+        "command": "memvidAgentMemory.showStats",
+        "title": "Memvid: Show Memory Statistics"
+      },
+      {
+        "command": "memvidAgentMemory.refreshMcp",
+        "title": "Memvid: Refresh MCP Server"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "dependencies": {
+    "@memvid/sdk": "^2.0.146",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.102.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.22.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.0"
+  }
+}
