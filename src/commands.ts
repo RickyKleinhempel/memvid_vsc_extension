@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { getMemoryFilePath, getEmbeddingConfig } from './config/settings.js';
 import { MemoryManager } from './memoryManager.js';
+import { CopilotLlmService } from './services/copilotLlmService.js';
 
 /**
  * Register all extension commands
@@ -170,6 +171,62 @@ export function registerCommands(
     vscode.commands.registerCommand('memvidAgentMemory.refreshMcp', () => {
       onRefreshMcp();
       vscode.window.showInformationMessage('Memvid MCP server refreshed.');
+    })
+  );
+
+  // Command: Select Copilot Model
+  disposables.push(
+    vscode.commands.registerCommand('memvidAgentMemory.selectCopilotModel', async () => {
+      const copilotLlm = CopilotLlmService.getInstance();
+      
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Fetching available Copilot models...',
+          cancellable: false,
+        },
+        async () => {
+          try {
+            const isAvailable = await copilotLlm.isAvailable();
+            
+            if (!isAvailable) {
+              vscode.window.showWarningMessage(
+                'No Copilot models available. Make sure GitHub Copilot is installed and you are signed in.'
+              );
+              return;
+            }
+            
+            const models = await copilotLlm.getAvailableModelsDetailed();
+            
+            if (models.length === 0) {
+              vscode.window.showWarningMessage('No Copilot models found.');
+              return;
+            }
+            
+            const config = vscode.workspace.getConfiguration('memvidAgentMemory');
+            const currentModel = config.get<string>('llmCopilot.modelFamily', 'gpt-4o');
+            
+            const items: vscode.QuickPickItem[] = models.map(m => ({
+              label: m.family,
+              description: m.id,
+              detail: `${m.vendor} - Max Tokens: ${m.maxInputTokens?.toLocaleString() || 'unknown'}`,
+              picked: m.family === currentModel
+            }));
+            
+            const selected = await vscode.window.showQuickPick(items, {
+              placeHolder: 'Select a Copilot model for answer generation',
+              title: 'Available Copilot Models',
+            });
+            
+            if (selected) {
+              await config.update('llmCopilot.modelFamily', selected.label, vscode.ConfigurationTarget.Global);
+              vscode.window.showInformationMessage(`Copilot model set to: ${selected.label}`);
+            }
+          } catch (error) {
+            vscode.window.showErrorMessage(`Failed to fetch models: ${(error as Error).message}`);
+          }
+        }
+      );
     })
   );
 

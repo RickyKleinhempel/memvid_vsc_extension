@@ -14,4 +14,6 @@ coverage/**
 !README.md
 !resources/instructions/*.md
 .git/**
+.github/**
+.memvid/**
 **/*.vsix

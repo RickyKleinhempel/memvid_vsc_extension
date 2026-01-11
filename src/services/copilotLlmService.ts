@@ -27,6 +27,17 @@ export interface CopilotRewriteResult {
 }
 
 /**
+ * Detailed model information for UI display
+ */
+export interface CopilotModelInfo {
+  id: string;
+  family: string;
+  vendor: string;
+  version: string;
+  maxInputTokens?: number;
+}
+
+/**
  * Copilot LLM Service using VS Code Language Model API
  */
 export class CopilotLlmService {
@@ -55,12 +66,30 @@ export class CopilotLlmService {
   }
 
   /**
-   * Get available Copilot models
+   * Get available Copilot models (simple format)
    */
   public async getAvailableModels(): Promise<string[]> {
     try {
       const models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
       return models.map(m => `${m.family} (${m.id})`);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Get available Copilot models with detailed information
+   */
+  public async getAvailableModelsDetailed(): Promise<CopilotModelInfo[]> {
+    try {
+      const models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+      return models.map(m => ({
+        id: m.id,
+        family: m.family,
+        vendor: m.vendor,
+        version: m.version,
+        maxInputTokens: m.maxInputTokens
+      }));
     } catch {
       return [];
     }

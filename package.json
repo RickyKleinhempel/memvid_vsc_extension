@@ -2,7 +2,7 @@
   "name": "memvid-agent-memory",
   "displayName": "Memvid Agent Memory",
   "description": "Provides persistent AI Agent Memory using Memvid for GitHub Copilot agents. Automatically registers MCP tools for storing, searching, and retrieving agent memory.",
-  "version": "0.1.7",
+  "version": "0.1.9",
   "publisher": "RickyKleinhempel",
   "license": "MIT",
   "repository": {
@@ -190,21 +190,7 @@
           "memvidAgentMemory.llmCopilot.modelFamily": {
             "type": "string",
             "default": "gpt-4o",
-            "enum": [
-              "gpt-4o",
-              "gpt-4o-mini",
-              "claude-3.5-sonnet",
-              "o1",
-              "o1-mini"
-            ],
-            "enumDescriptions": [
-              "GPT-4o - Best balance of speed and quality",
-              "GPT-4o Mini - Faster, more cost-effective",
-              "Claude 3.5 Sonnet - Anthropic's latest model",
-              "o1 - OpenAI reasoning model",
-              "o1-mini - Smaller reasoning model"
-            ],
-            "description": "Preferred Copilot model family. Availability depends on your Copilot subscription."
+            "markdownDescription": "Preferred Copilot model family. Use [Select Copilot Model](command:memvidAgentMemory.selectCopilotModel) to see available models."
           }
         }
       },
@@ -346,6 +332,10 @@
       {
         "command": "memvidAgentMemory.refreshMcp",
         "title": "Memvid: Refresh MCP Server"
+      },
+      {
+        "command": "memvidAgentMemory.selectCopilotModel",
+        "title": "Memvid: Select Copilot Model"
       }
     ]
   },
