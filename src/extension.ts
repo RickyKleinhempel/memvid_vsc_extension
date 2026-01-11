@@ -44,6 +44,53 @@ function ensureStorageDirectory(globalStoragePath: string): void {
 }
 
 /**
+ * Copy instruction file to workspace .github/instructions folder
+ * @param extensionPath - Extension installation path
+ */
+function copyInstructionFileToWorkspace(extensionPath: string): void {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    log('No workspace folder open, skipping instruction file copy');
+    return;
+  }
+
+  const workspaceRoot = workspaceFolders[0].uri.fsPath;
+  const sourceFile = path.join(extensionPath, 'resources', 'instructions', 'memvidagentmemory.instructions.md');
+  const targetDir = path.join(workspaceRoot, '.github', 'instructions');
+  const targetFile = path.join(targetDir, 'memvidagentmemory.instructions.md');
+
+  // Check if source file exists
+  if (!fs.existsSync(sourceFile)) {
+    log(`Instruction file not found at ${sourceFile}`);
+    return;
+  }
+
+  // Check if target file already exists
+  if (fs.existsSync(targetFile)) {
+    log('Instruction file already exists in workspace, skipping copy');
+    return;
+  }
+
+  try {
+    // Create target directory if it doesn't exist
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+      log(`Created instructions directory: ${targetDir}`);
+    }
+
+    // Copy the file
+    fs.copyFileSync(sourceFile, targetFile);
+    log(`Copied instruction file to ${targetFile}`);
+    
+    vscode.window.showInformationMessage(
+      'Memvid: Instruction file added to .github/instructions for Copilot integration.'
+    );
+  } catch (error) {
+    log(`Failed to copy instruction file: ${(error as Error).message}`);
+  }
+}
+
+/**
  * Check if @memvid/sdk is installed in the extension directory
  * @param extensionPath - Extension installation path
  * @returns true if SDK is available
@@ -195,6 +242,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Log memory file location
   const memoryPath = getMemoryFilePath(globalStoragePath);
   log(`Memory file location: ${memoryPath}`);
+
+  // Copy instruction file to workspace
+  copyInstructionFileToWorkspace(extensionPath);
 
   log('Memvid Agent Memory extension activated successfully');
 }
