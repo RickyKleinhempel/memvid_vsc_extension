@@ -246,6 +246,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Copy instruction file to workspace
   copyInstructionFileToWorkspace(extensionPath);
 
+  // Listen for workspace folder changes to copy instruction file to new workspaces
+  const workspaceChangeDisposable = vscode.workspace.onDidChangeWorkspaceFolders(() => {
+    log('Workspace folders changed, checking instruction file...');
+    copyInstructionFileToWorkspace(extensionPath);
+  });
+  context.subscriptions.push(workspaceChangeDisposable);
+
   log('Memvid Agent Memory extension activated successfully');
 }
 
