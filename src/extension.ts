@@ -271,7 +271,7 @@ async function showWelcomeMessage(context: vscode.ExtensionContext): Promise<voi
   );
 
   if (choice === 'Learn More') {
-    vscode.env.openExternal(vscode.Uri.parse('https://github.com/memvid/memvid'));
+    vscode.env.openExternal(vscode.Uri.parse('https://github.com/RickyKleinhempel/memvid_vsc_extension'));
   } else if (choice === 'Show Stats') {
     vscode.commands.executeCommand('memvidAgentMemory.showStats');
   }

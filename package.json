@@ -2,7 +2,7 @@
   "name": "memvid-agent-memory",
   "displayName": "Memvid Agent Memory",
   "description": "Provides persistent AI Agent Memory using Memvid for GitHub Copilot agents. Automatically registers MCP tools for storing, searching, and retrieving agent memory.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "publisher": "RickyKleinhempel",
   "license": "MIT",
   "repository": {
